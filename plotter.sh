@@ -151,3 +151,5 @@ rm -rf ~/lets-farm
 
 # 11.0  Configure Plotman
 echo 'Visit http://<vm-ip>:8926/settings/plotting to configure Plotman and start plotting.'
+read -p "All done! Press enter to exit session"
+exit
