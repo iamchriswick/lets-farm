@@ -105,7 +105,7 @@ cd ~/lets-farm
 rm -rf ~/lets-farm/tmp
 
 # 6.2 Manage Docker as a non-root user:
-sudo groupadd docker
+# sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
 
@@ -114,13 +114,19 @@ docker run -d --name='machinaris' -p 8926:8926 -e TZ="Europe/Oslo" -e mode=plott
 
 
 # 8.0 Setup SSH
+
+# 8.1 Add SSH Key
 ssh-keygen
 #echo "# Added by iamchriswick" | sudo tee -a ~/.ssh/authorized_keys
 #echo `cat ~/.ssh/id_rsa.pub` | sudo tee -a ~/.ssh/authorized_keys
-# ssh -i ~/.ssh/id_rsa iamchriswick@localhost df -aBK | grep /mnt/farm/
-cat ~/.ssh/id_rsa.pub
-read -p "Add the above Public Key to your GCP instance, and press enter to continue"
 
+# 8.2 Add SSH Key to GCP VM Instance
+cat ~/.ssh/id_rsa.pub
+read -p "Add the above Public Key to your GCP VM Instance, and press enter to continue"
+read -p "Wait untill the GCP VM Instance has updated and press enter to continue"
+
+# 8.3 Test if SSH was set up corectly
+ssh -i ~/.ssh/id_rsa iamchriswick@localhost df -aBK | grep /mnt/farm/
 
 # 9.0 rsync
 
@@ -133,13 +139,15 @@ sudo systemctl enable rsync
 echo "testing" > testfile.test
 rsync -P testfile.test rsync://iamchriswick@localhost:12000/chia/archive
 ls /mnt/farm/archive
+read -p "Press enter to continue if you see the testfile"
 rm /mnt/farm/archive/testfile.test
 rm ~/lets-farm/testfile.test
 
 
 # 10.0 Cleanup
+cd ~/
 rm -rf ~/lets-farm
 
 
 # 11.0  Configure Plotman
-echo 'Visit http://<vm-ip>:8926 to config Plotman and start plotting.'
+echo 'Visit http://<vm-ip>:8926/settings/plotting to configure Plotman and start plotting.'
