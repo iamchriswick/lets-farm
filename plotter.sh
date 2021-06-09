@@ -10,12 +10,12 @@ sudo apt autoremove --yes
 sudo apt install --yes unzip iotop htop wget nano
 
 # 1.3 Install duf
-mkdir ~/tmp
-cd ~/tmp
+mkdir ~/lets-farm/tmp
+cd ~/lets-farm/tmp
 wget https://github.com/muesli/duf/releases/download/v0.6.2/duf_0.6.2_linux_amd64.deb
 sudo dpkg -i duf_0.6.2_linux_amd64.deb
-cd ~/
-rm -rf ~/tmp
+cd ~/lets-farm
+rm -rf ~/lets-farm/tmp
 
 
 # 2.0 Add Temp Storage (local SSDs)
@@ -51,7 +51,7 @@ sudo mkfs.xfs -m crc=0 -f -L XFS /dev/sdb
 sudo mkdir -p /mnt/plots
 
 # 3.3 Configure read and write access to the directory
-	sudo chmod a+w /mnt/plots
+sudo chmod a+w /mnt/plots
 
 # 3.4 Create the /etc/fstab entry for /mnt/plots
 echo UUID=`sudo blkid -s UUID -o value /dev/sdb` /mnt/plots  xfs discard,defaults 0 0 | sudo tee -a /etc/fstab
@@ -75,25 +75,34 @@ sudo apt-get update
 sudo apt-get install gcsfuse --yes
 
 # 4.5 Create the /etc/fstab entry for /mnt/farm/archive
+MYUID=$(id -u $USER)
+MYGID=$(id -g $USER)
 echo "What's the name of the GCP bucket you want to mount?"
 read BUCKETNAME
-echo $BUCKETNAME /mnt/farm/archive gcsfuse rw,_netdev,allow_other,uid=`echo $UID`,gid=`echo $UID` | sudo tee -a /etc/fstab
+echo $BUCKETNAME /mnt/farm/archive gcsfuse rw,_netdev,allow_other,uid=`echo $MYUID`,gid=`echo $MYGID` | sudo tee -a /etc/fstab
 
 
 # 5.0 Mount all the entries added to /dev/fstab and list them
+
+# 5.1 Mount
 sudo mount -a
 duf
+
+# 5.2 Configure read and write access to the mounted directories
+sudo chmod a+w /mnt/temp
+sudo chmod a+w /mnt/plots
+sudo chmod a+w /mnt/farm/archive
 
 
 # 6.0 Setup Machinaris to plot Chia
 
 # 6.1 Install Docker
-mkdir ~/tmp
-cd ~/tmp
+mkdir ~/lets-farm/tmp
+cd ~/lets-farm/tmp
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
-cd ~/
-rm -rf ~/tmp
+cd ~/lets-farm
+rm -rf ~/lets-farm/tmp
 
 # 6.2 Manage Docker as a non-root user:
 sudo groupadd docker
@@ -101,7 +110,36 @@ sudo usermod -aG docker $USER
 newgrp docker
 
 # 6.3 Install Machinaris
-docker run -d --name='machinaris' -p 8926:8926 -e TZ="Europe/Oslo" -e mode=plotter -e farmer_pk=8bda5707b657821cab51a386a855adf787e6d992a6de3fadc7c0c0dafe38e26dcc4f209fbdf7ec6ddd475fb9f8e7c84c -e pool_pk=a901edfeaabb61e5c4ff2af983994c166a25be098ef523caa688aff166efebcab1a77dbbbbe867f76b7e1f417eeecc16 -v '/home/'`echo $USER`'/.machinaris':'/root/.chia':'rw' -v '/mnt/plots':'/plots':'rw' -v '/mnt/temp':'/plotting':'rw' -t 'ghcr.io/guydavis/machinaris'
+docker run -d --name='machinaris' -p 8926:8926 -e TZ="Europe/Oslo" -e mode=plotter -e farmer_pk=8bda5707b657821cab51a386a855adf787e6d992a6de3fadc7c0c0dafe38e26dcc4f209fbdf7ec6ddd475fb9f8e7c84c -e pool_pk=a901edfeaabb61e5c4ff2af983994c166a25be098ef523caa688aff166efebcab1a77dbbbbe867f76b7e1f417eeecc16 -v '/home/iamchriswick/.machinaris':'/root/.chia':'rw' -v '/mnt/plots':'/plots':'rw' -v '/mnt/temp':'/plotting':'rw' -t 'ghcr.io/guydavis/machinaris'
 
-# 6.4 Start Plotting
+
+# 8.0 Setup SSH
+ssh-keygen
+#echo "# Added by iamchriswick" | sudo tee -a ~/.ssh/authorized_keys
+#echo `cat ~/.ssh/id_rsa.pub` | sudo tee -a ~/.ssh/authorized_keys
+# ssh -i ~/.ssh/id_rsa iamchriswick@localhost df -aBK | grep /mnt/farm/
+cat ~/.ssh/id_rsa.pub
+read -p "Add the above Public Key to your GCP instance, and press enter to continue"
+
+
+# 9.0 rsync
+
+# 9.1 Set up rsync daemon (rsyncd)
+sudo cp ~/lets-farm/rsyncd.conf /etc/rsyncd.conf
+sudo systemctl start rsync
+sudo systemctl enable rsync
+
+# 9.2 Test rsync
+echo "testing" > testfile.test
+rsync -P testfile.test rsync://iamchriswick@localhost:12000/chia/archive
+ls /mnt/farm/archive
+rm /mnt/farm/archive/testfile.test
+rm ~/lets-farm/testfile.test
+
+
+# 10.0 Cleanup
+rm -rf ~/lets-farm
+
+
+# 11.0  Configure Plotman
 echo 'Visit http://<vm-ip>:8926 to config Plotman and start plotting.'
