@@ -109,6 +109,8 @@ rm -rf ~/lets-farm/tmp
 sudo usermod -aG docker $USER
 newgrp docker
 
+read -p "Docker installed! Press enter to install Machinaris."
+
 # 6.3 Install Machinaris
 docker run -d --name='machinaris' -p 8926:8926 -e TZ="Europe/Oslo" -e mode=plotter -e farmer_pk=8bda5707b657821cab51a386a855adf787e6d992a6de3fadc7c0c0dafe38e26dcc4f209fbdf7ec6ddd475fb9f8e7c84c -e pool_pk=a901edfeaabb61e5c4ff2af983994c166a25be098ef523caa688aff166efebcab1a77dbbbbe867f76b7e1f417eeecc16 -v '/home/iamchriswick/.machinaris':'/root/.chia':'rw' -v '/mnt/plots':'/plots':'rw' -v '/mnt/temp':'/plotting':'rw' -t 'ghcr.io/guydavis/machinaris'
 
